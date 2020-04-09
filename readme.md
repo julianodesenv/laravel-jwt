@@ -1,66 +1,67 @@
-<p align="center"><img src="https://laravel.com/assets/img/components/logo-laravel.svg"></p>
+## Exemplo de aplicação JWT no Laravel
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/d/total.svg" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/v/stable.svg" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/license.svg" alt="License"></a>
-</p>
+Foi utilizado o pacote https://github.com/tymondesigns/jwt-auth para a implementação.
 
-## About Laravel
+## Configurações
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel attempts to take the pain out of development by easing common tasks used in the majority of web projects, such as:
+No arquivo config/auth.php
+<pre>
+'guards' => [
+        'api' => [
+            'driver' => 'jwt',
+            'provider' => 'users',
+        ],
+    ],
+</pre>
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+####Passo a passo
+- Adicionado usuário pela seeder
+- No model é implamentado a interface JWTSubject (implementar 2 métodos: getJWTIdentifier e getJWTCustomClaims)
+- Gerar chave através do comando: php artisan jwt:secret que ficará no .env
 
-Laravel is accessible, yet powerful, providing tools needed for large, robust applications.
+####Criando endpoint para login de usuário
+- Criar controller \Api\AuthController.php
+- Importar a trait AuthenticatesUsers
+- Criar routes no arquivo routes/api.php
+<pre>
+Route::name('api.login')->post('login', 'Api\AuthController@login');
+</pre>
+- Enviar um POST para api/login com e-mail e senha, na saída conterá o token
 
-## Learning Laravel
+####Permitindo acesso à API somente para usuários autenticados
+- Criar um group de routes no arquivo routes/api.php
+<pre>
+Route::group(['middleware' => ['auth:api']], function(){});
+</pre>
+- Alteração no arquivo \App\Http\Middleware\Authenticate.php para sempre retornar json na route /api
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of any modern web application framework, making it a breeze to get started learning the framework.
+####Revogando token JWT - Logout
+- No controller \App\Http\Controllers\Api\AuthController foi adicionado o método logout()
+- Route adicionada no arquivo routes/api.php
+<pre>
+Route::post('logout', 'Api\AuthController@logout');
+</pre>
 
-If you're not in the mood to read, [Laracasts](https://laracasts.com) contains over 1100 video tutorials on a range of topics including Laravel, modern PHP, unit testing, JavaScript, and more. Boost the skill level of yourself and your entire team by digging into our comprehensive video library.
+####Tempo de expiração do token
+- Criar um LaravelServiceProvider para o JWT, o arquivo ficará em config/jwt.php
+<pre>
+php artisan vendor:publish --provider="Tymon\JWTAuth\Providers\LaravelServiceProvider"
+</pre>
+- Neste arquivo é possível determinar o tempo de vida do Token
 
-## Laravel Sponsors
+####Refresh Token
+- No controller \App\Http\Controllers\Api\AuthController foi adicionado o método refresh()
+- Route adicionada no arquivo routes/api.php
+<pre>
+Route::post('refresh', 'Api\AuthController@refresh');
+</pre>
 
-We would like to extend our thanks to the following sponsors for helping fund on-going Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell):
-
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[British Software Development](https://www.britishsoftware.co)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- [UserInsights](https://userinsights.com)
-- [Fragrantica](https://www.fragrantica.com)
-- [SOFTonSOFA](https://softonsofa.com/)
-- [User10](https://user10.com)
-- [Soumettre.fr](https://soumettre.fr/)
-- [CodeBrisk](https://codebrisk.com)
-- [1Forge](https://1forge.com)
-- [TECPRESSO](https://tecpresso.co.jp/)
-- [Runtime Converter](http://runtimeconverter.com/)
-- [WebL'Agence](https://weblagence.com/)
-- [Invoice Ninja](https://www.invoiceninja.com)
-- [iMi digital](https://www.imi-digital.de/)
-- [Earthlink](https://www.earthlink.ro/)
-- [Steadfast Collective](https://steadfastcollective.com/)
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# laravel-jwt
+####Auto refresh token
+- Criar um nov middleware e registar o mesmo em app/Http/Kernel.php
+<pre>
+'jwt.refresh' => RefreshToken::class
+</pre>
+- Adicionar middleware a route
+<pre>
+Route::group(['middleware' => ['auth:api','jwt.refresh']], function(){});
+</pre>

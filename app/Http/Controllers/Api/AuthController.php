@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Illuminate\Support\Facades\Lang;
 
 class AuthController extends Controller
 {
@@ -13,10 +16,8 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $this->validateLogin($request);
-
         $credentials = $this->credentials($request);
-
-        $token = \JWTAuth::attempt($credentials);
+        $token = JWTAuth::attempt($credentials);
 
         return $this->responseToken($token);
     }
@@ -25,17 +26,19 @@ class AuthController extends Controller
     {
         return $token ? ['token' => $token] :
             response()->json([
-                'error' => \Lang::get('auth.failed')
+                'error' => Lang::get('auth.failed')
             ], 400);
     }
 
-    public function logout(){
-        \Auth::guard('api')->logout();
-        return response()->json([],204); //No-content
+    public function logout()
+    {
+        Auth::guard('api')->logout();
+        return response()->json([], 204); //No-content
     }
 
-    public function refresh(){
-        $token = \Auth::guard('api')->refresh();
+    public function refresh()
+    {
+        $token = Auth::guard('api')->refresh();
         return ['token' => $token]; //No-content
     }
 }
