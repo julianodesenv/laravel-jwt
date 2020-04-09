@@ -21,11 +21,6 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 Route::name('api.login')->post('login', 'Api\AuthController@login');
 Route::post('refresh', 'Api\AuthController@refresh');
 
-
-//Req 1 - token XXX - refresh token - YYY
-//req2 - token XXX
-//req3 - token XXX
-
 Route::group(['middleware' => ['auth:api','jwt.refresh']], function(){
     Route::get('users', function(){
         return \App\User::all();
